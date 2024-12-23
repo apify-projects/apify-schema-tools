@@ -1,0 +1,228 @@
+# Apify Schema Tools
+
+This is a tool intended for Apify's actors developers.
+
+## Features
+
+- Generate Apify input and dataset schemas from separate JSON schemas.
+- Generate TypeScript types from JSON schemas using [json-schema-to-typescript](https://www.npmjs.com/package/json-schema-to-typescript).
+
+### "Under the hoods" features
+
+- Remove invalid fields from the input schema to generate the Apify schema, but still include them to generate the TypeScript interface.
+- Overwrite the output schema's `fields` field.
+- Use `Input` and `DatasetItem` as TypeScript interface names.
+
+## Install
+
+Install globally:
+
+```sh
+npm i -g apify-schema-tools
+```
+
+Install as a development dependency:
+
+```sh
+npm i -D apify-schema-tools
+```
+
+## Available commands
+
+- `generate-apify-schema`
+- `generate-apify-type`
+
+## CLI options
+
+- `--input`: generate input schema or type
+- `--dataset`: generate dataset schema or type
+- `--input-src`: path of the input JSON schema (default = `src-schemas/input.json`).
+- `--dataset-src`: path of the dataset JSON schema (default = `src-schemas/dataset-item.json`).
+
+Only for `generate-apify-schema`:
+
+- `--input-schema`: path of the Actor's input schema (default = `.actor/input_schema.json`).
+- `--dataset-schema`: path of the Actor's dataset schema (default = `.actor/dataset_schema.json`).
+
+Only for `generate-apify-type`:
+
+- `--input-type`: path of the TypeScript file that will contain the input's type (default = `src/generated/input.ts`).
+- `--dataset-type`: path of the TypeScript file that will contain the dataset's type (default = `src/generated/dataset.ts`).
+
+## Examples
+
+Assume you have defined the following schemas:
+
+- `src-schemas/input.json`
+
+```jsonc
+{
+    "title": "My actor's input",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "inputData": {
+            "title": "Input Data",
+            "type": "array",
+            "description": "Some input data in json format.",
+            "editor": "json",
+            "prefill": [
+                {
+                    "title": "Test title"
+                }
+            ],
+            "items": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "title"
+                ]
+            }
+        }
+    }
+}
+```
+
+- `src-schemas/dataset-item.json`
+
+```jsonc
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "My actor's dataset schema",
+    "type": "object",
+    "properties": {
+        "value": {
+            "type": "string"
+        },
+        "category": {
+            "enum": [
+                "cat1",
+                "cat2"
+            ]
+        },
+    },
+    "required": [
+        "value",
+        "category"
+    ]
+}
+```
+
+### Generate Apify input schema
+
+```sh
+npx generate-apify-schema --input --input-src=src-schemas/input.json --input-schema=.actor/input_schema.json
+```
+
+### Generate TypeScript type file for the output schema
+
+```sh
+npx generate-apify-type --dataset --dataset-src=src-schemas/dataset-item.json --dataset-type=src/generated/dataset-item.ts
+```
+
+### Generate everything using the default settings
+
+The scripts expect to find the files `.actor/dataset_schema.json`, `src-schemas/input.json`, `src-schemas/dataset-item.json`.
+The files `.actor/input_schema.json`, `src/generated/input.ts`, and `src/generated/dataset.ts` will be generated.
+
+```sh
+npx generate-apify-type --input --dataset && npx generate-apify-schema --input --dataset
+```
+
+Results:
+
+- `.actor/input_schema.json`
+
+```jsonc
+{
+    "title": "My actor's input",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        // The property `items` has been omitted because it would fail Apify's validation
+        "inputData": {
+            "title": "Input Data",
+            "type": "array",
+            "description": "Some input data in json format.",
+            "editor": "json",
+            "prefill": [
+                {
+                    "title": "Test title"
+                }
+            ]
+        }
+    }
+}
+```
+
+- `.actor/dataset_schema.json` (this file should already exist: the schema is set as `fields` value)
+
+```jsonc
+{
+    "actorSpecification": 1,
+    "fields": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "My actor's dataset schema",
+        "type": "object",
+        "properties": {
+            "value": {
+                "type": "string"
+            },
+            "category": {
+                "enum": [
+                    "cat1",
+                    "cat2"
+                ]
+            },
+        },
+        "required": [
+            "value",
+            "category"
+        ]
+    },
+    "views": {}
+}
+```
+
+- `src/generated/input.ts`
+
+```ts
+/* eslint-disable */
+/**
+ * This file was automatically generated by json-schema-to-typescript.
+ * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
+ * and run json-schema-to-typescript to regenerate this file.
+ */
+
+/**
+ * Some input data in json format.
+ */
+export type InputData = {
+  title: string;
+}[];
+
+export interface Input {
+  inputData?: InputData;
+}
+```
+
+- `src/generated/dataset-item.ts`
+
+```ts
+/* eslint-disable */
+/**
+ * This file was automatically generated by json-schema-to-typescript.
+ * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
+ * and run json-schema-to-typescript to regenerate this file.
+ */
+
+export interface DatasetItem {
+  value: string;
+  category: "cat1" | "cat2";
+}
+
+```
