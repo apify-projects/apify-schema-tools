@@ -24,7 +24,7 @@ export type InputWithDefaults = Input & {
   debugMode: DebugMode;
 };
 
-export function getInputWithDefaultValues(input?: Input): InputWithDefaults {
+export function getInputWithDefaultValues(input?: Input | null): InputWithDefaults {
     if (Actor.isAtHome()) {
         // The platform is supposed to fill in the default values
         return input! as InputWithDefaults;
