@@ -111,37 +111,6 @@ mkdir src-schemas
           "url": { "type": "string" }
         }
       }
-    },
-    "maxPages": {
-      "type": "integer",
-      "title": "Maximum pages",
-      "description": "Maximum number of pages to scrape",
-      "default": 10,
-      "minimum": 1,
-      "maximum": 1000
-    },
-    "proxy": {
-      "type": "object",
-      "title": "Proxy configuration",
-      "description": "Proxy settings",
-      "default": { "useApifyProxy": true },
-      "properties": {
-        "useApifyProxy": { "type": "boolean", "default": true }
-      }
-    },
-    "debugMode": {
-      "type": "boolean",
-      "title": "Debug mode",
-      "description": "Enable debug logging",
-      "default": false
-    },
-    "searchTerm": {
-      "type": "string",
-      "title": "Search term",
-      "description": "Term to search for",
-      "default": "",
-      "minLength": 1,
-      "maxLength": 100
     }
   },
   "required": ["startUrls"]

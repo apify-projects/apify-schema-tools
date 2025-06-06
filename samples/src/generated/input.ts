@@ -12,6 +12,10 @@ export type StartURLs = {
   url?: string;
 }[];
 /**
+ * Term to search for
+ */
+export type SearchTerm = string;
+/**
  * Maximum number of pages to scrape
  */
 export type MaximumPages = number;
@@ -19,17 +23,13 @@ export type MaximumPages = number;
  * Enable debug logging
  */
 export type DebugMode = boolean;
-/**
- * Term to search for
- */
-export type SearchTerm = string;
 
 export interface Input {
   startUrls: StartURLs;
+  searchTerm: SearchTerm;
   maxPages?: MaximumPages;
   proxy?: ProxyConfiguration;
   debugMode?: DebugMode;
-  searchTerm?: SearchTerm;
 }
 /**
  * Proxy settings

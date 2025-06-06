@@ -5,23 +5,23 @@
  */
 
 import { Actor } from 'apify';
-import type { Input, MaximumPages, ProxyConfiguration, DebugMode, SearchTerm } from './input.js';
+import type { Input, MaximumPages, ProxyConfiguration, DebugMode } from './input.js';
 
-const defaultValues = {
+export const DEFAULT_INPUT_VALUES = {
     "startUrls": [],
     "maxPages": 10,
     "proxy": {
         "useApifyProxy": true
     },
-    "debugMode": false,
-    "searchTerm": ""
-};
+    "debugMode": false
+} as const;
+
+export const REQUIRED_INPUT_FIELDS_WITHOUT_DEFAULT = ["searchTerm"] as const;
 
 export type InputWithDefaults = Input & {
   maxPages: MaximumPages;
   proxy: ProxyConfiguration;
   debugMode: DebugMode;
-  searchTerm: SearchTerm;
 };
 
 export function getInputWithDefaultValues(input?: Input): InputWithDefaults {
@@ -30,10 +30,10 @@ export function getInputWithDefaultValues(input?: Input): InputWithDefaults {
         return input! as InputWithDefaults;
     }
     if (!input) {
-        input = {} as Input;
+        throw new Error('Input is required, because the following fields are required: ' + REQUIRED_INPUT_FIELDS_WITHOUT_DEFAULT.join(', '));
     }
     return {
-        ...defaultValues,
+        ...DEFAULT_INPUT_VALUES,
         ...input,
     };
 }

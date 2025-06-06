@@ -10,6 +10,13 @@
             "default": [],
             "editor": "requestListSources"
         },
+        "searchTerm": {
+            "type": "string",
+            "title": "Search term",
+            "description": "Term to search for",
+            "minLength": 1,
+            "maxLength": 100
+        },
         "maxPages": {
             "type": "integer",
             "title": "Maximum pages",
@@ -31,17 +38,10 @@
             "title": "Debug mode",
             "description": "Enable debug logging",
             "default": false
-        },
-        "searchTerm": {
-            "type": "string",
-            "title": "Search term",
-            "description": "Term to search for",
-            "default": "",
-            "minLength": 1,
-            "maxLength": 100
         }
     },
     "required": [
-        "startUrls"
+        "startUrls",
+        "searchTerm"
     ]
 }

@@ -233,7 +233,13 @@ export async function generateInputDefaultsFileContent(
 import { Actor } from 'apify';
 import type { Input, ${paramTypesToImport.join(", ")} } from './input.js';
 
-const defaultValues = ${JSON.stringify(defaultValues, null, 4)};
+export const DEFAULT_INPUT_VALUES = ${JSON.stringify(defaultValues, null, 4)} as const;
+
+export const REQUIRED_INPUT_FIELDS_WITHOUT_DEFAULT = [${
+  requiredParamsWithoutDefaults
+    .map(({ key }) => `"${key}"`)
+    .join(", ")
+}] as const;
 
 export type InputWithDefaults = Input & {
 ${optionalParamsWithDefaults
@@ -249,14 +255,12 @@ export function getInputWithDefaultValues(input?: Input): InputWithDefaults {
     if (!input) {
         ${
           requiredParamsWithoutDefaults.length > 0
-            ? `throw new Error("Input is required, because the following fields are required: ${requiredParamsWithoutDefaults
-                .map(({ key }) => key)
-                .join(", ")}.");`
+            ? `throw new Error('Input is required, because the following fields are required: ' + REQUIRED_INPUT_FIELDS_WITHOUT_DEFAULT.join(', '));`
             : "input = {} as Input;"
         }
     }
     return {
-        ...defaultValues,
+        ...DEFAULT_INPUT_VALUES,
         ...input,
     };
 }

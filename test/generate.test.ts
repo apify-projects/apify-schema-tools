@@ -500,4 +500,51 @@ describe("generate.ts script", () => {
       field2: 42, // default value
     });
   });
+
+  it("should generate some input utils that export default values and required fields without default", async () => {
+    const inputSchema = {
+      type: "object",
+      title: "Input",
+      schemaVersion: 1,
+      properties: {
+        field1: {
+          type: "string",
+          default: "default value",
+        },
+        field2: {
+          type: "number",
+          default: 42,
+        },
+        field3: {
+          type: "boolean",
+        },
+      },
+      required: ["field1", "field3"],
+    };
+
+    const { srcSchemasDir, actorDir, generatedDir, dirArgs } =
+      createTestDirectories();
+    writeActorDatasetSchema(actorDir);
+    writeSourceInputSchema(srcSchemasDir, inputSchema);
+
+    execSync(
+      `npx apify-generate \
+        --input input \
+        --output ts-types \
+        ${dirArgs}`,
+      { encoding: "utf8", cwd: process.cwd() }
+    );
+
+    const { DEFAULT_INPUT_VALUES, REQUIRED_INPUT_FIELDS_WITHOUT_DEFAULT } =
+      await import(
+        // The date query parameter is used to override cache and force re-import
+        path.join(generatedDir, `input-utils.ts?t=${Date.now()}`)
+      );
+
+    expect(DEFAULT_INPUT_VALUES).toEqual({
+      field1: "default value",
+      field2: 42,
+    });
+    expect(REQUIRED_INPUT_FIELDS_WITHOUT_DEFAULT).toEqual(["field3"]);
+  })
 });
