@@ -4,6 +4,8 @@ import fs from "fs";
 
 import { DEFAULT_SOURCE_FOLDER, filterValidInputSchemaProperties, parseCliArgs, parseSchemaFiles } from "./index.js";
 
+console.warn("This script is deprecated. Use `apify-generate` instead.");
+
 const {
   input: doInput,
   dataset: doDataset,

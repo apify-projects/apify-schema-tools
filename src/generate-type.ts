@@ -9,6 +9,8 @@ import {
   parseSchemaFiles,
 } from "./index.js";
 
+console.warn("This script is deprecated. Use `apify-generate` instead.");
+
 const JSON_TO_TS_COMPILE_OPTIONS = {
   additionalProperties: false,
 };
@@ -17,8 +19,8 @@ const {
   input: doInput,
   dataset: doDataset,
   "input-src": inputSourceFile = `${DEFAULT_SOURCE_FOLDER}/input.json`,
-  "dataset-src": datasetSourceFile =
-    `${DEFAULT_SOURCE_FOLDER}/dataset-item.json`,
+  "dataset-src":
+    datasetSourceFile = `${DEFAULT_SOURCE_FOLDER}/dataset-item.json`,
   "input-type": inputTypeFile = "src/generated/input.ts",
   "dataset-type": datasetTypeFile = "src/generated/dataset.ts",
 } = parseCliArgs<{
@@ -28,7 +30,7 @@ const {
 
 const { inputSchema, datasetSchema } = parseSchemaFiles(
   doInput ? inputSourceFile : undefined,
-  doDataset ? datasetSourceFile : undefined,
+  doDataset ? datasetSourceFile : undefined
 );
 
 if (inputSchema) {
@@ -38,8 +40,8 @@ if (inputSchema) {
     await compile(
       { ...inputSchema, title: "Input" },
       "input_schema",
-      JSON_TO_TS_COMPILE_OPTIONS,
-    ),
+      JSON_TO_TS_COMPILE_OPTIONS
+    )
   );
 }
 if (datasetSchema) {
@@ -49,7 +51,7 @@ if (datasetSchema) {
     await compile(
       { ...datasetSchema, title: "DatasetItem" },
       "dataset_schema",
-      JSON_TO_TS_COMPILE_OPTIONS,
-    ),
+      JSON_TO_TS_COMPILE_OPTIONS
+    )
   );
 }

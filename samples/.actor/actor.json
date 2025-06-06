@@ -1,0 +1,15 @@
+{
+	"actorSpecification": 1,
+	"name": "web-scraper",
+	"title": "Web Scraper",
+	"description": "A web scraper.",
+	"version": "0.0",
+	"meta": {
+		"templateId": "ts-crawlee-playwright-chrome"
+	},
+	"input": "./input_schema.json",
+	"storages": {
+        "dataset": "./dataset_schema.json"
+    },
+	"dockerfile": "./Dockerfile"
+}

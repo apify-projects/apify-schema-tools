@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+# Check for .only( in test files
+if grep -r "\.only(" --include="*.test.ts" .; then
+  echo "Error: found \".only(\" in test files. Please remove focused tests before committing."
+  exit 1
+fi
+
+npm test

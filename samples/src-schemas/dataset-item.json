@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Dataset schema for Web Scraper",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "Title",
+      "description": "Page title"
+    },
+    "url": {
+      "type": "string",
+      "title": "URL",
+      "description": "Page URL"
+    },
+    "text": {
+      "type": "string",
+      "title": "Text content",
+      "description": "Extracted text"
+    },
+    "timestamp": {
+      "type": "string",
+      "title": "Timestamp",
+      "description": "When the data was scraped"
+    }
+  },
+  "required": ["title", "url"]
+}

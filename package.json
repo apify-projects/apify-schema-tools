@@ -5,23 +5,30 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
+    "apify-generate": "dist/generate.js",
     "generate-apify-schema": "dist/generate-schema.js",
     "generate-apify-type": "dist/generate-type.js"
   },
   "scripts": {
     "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run",
+    "prepare": "husky"
   },
   "author": "Marco Gullo",
   "license": "Apache-2.0",
   "type": "module",
   "devDependencies": {
     "@apify/tsconfig": "^0.1.0",
+    "@types/argparse": "^2.0.17",
     "@types/minimist": "^1.2.5",
     "@types/node": "^22.10.2",
-    "typescript": "^5.7.2"
+    "apify": "^3.4.2",
+    "husky": "^9.1.7",
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.0"
   },
   "dependencies": {
+    "argparse": "^2.0.1",
     "json-schema-to-typescript": "^15.0.3",
     "minimist": "^1.2.8"
   }
