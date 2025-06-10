@@ -14,8 +14,18 @@
         "Sample"
       ]
     },
+    "categories": {
+      "position": 30,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "url": { "type": "string", "title": "Category URL" }
+        }
+      }
+    },
     "maxRetries": {
-      "position": 35,
+      "position": 45,
       "type": "integer",
       "title": "Maximum retries",
       "description": "Maximum number of retries",

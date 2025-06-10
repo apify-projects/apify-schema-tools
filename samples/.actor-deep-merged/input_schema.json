@@ -1,6 +1,6 @@
 {
-    "title": "Input schema for Web Scraper",
-    "description": "startUrls and searchTerm are required.",
+    "title": "Input schema for Web Scraper merged",
+    "description": "startUrls and searchTerm are required. searchTerm must be one of the predefined values.",
     "type": "object",
     "schemaVersion": 1,
     "properties": {
@@ -15,8 +15,16 @@
             "type": "string",
             "title": "Search term",
             "description": "Term to search for",
-            "minLength": 1,
-            "maxLength": 100
+            "enum": [
+                "example",
+                "test",
+                "sample"
+            ],
+            "enumTitles": [
+                "Example",
+                "Test",
+                "Sample"
+            ]
         },
         "categories": {
             "type": "array",
@@ -41,6 +49,14 @@
             "default": {
                 "useApifyProxy": true
             }
+        },
+        "maxRetries": {
+            "type": "integer",
+            "title": "Maximum retries",
+            "description": "Maximum number of retries",
+            "default": 3,
+            "minimum": 1,
+            "maximum": 20
         },
         "debugMode": {
             "type": "boolean",

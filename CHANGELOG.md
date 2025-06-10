@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0
+
+### Added
+
+- The option `--deep-merge` allows to keep object and array definitions from both the base and the additional schemas.
+
+### Fixed
+
+- The generated `input-utils.ts` file now avoids TypeScript errors in some occasions.
+
 ## 1.2.0
 
 ### Added

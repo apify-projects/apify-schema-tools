@@ -1,0 +1,15 @@
+{
+	"actorSpecification": 1,
+	"name": "web-scraper-merged",
+	"title": "Web Scraper with merged schemas",
+	"description": "A web scraper with merged schemas.",
+	"version": "0.0",
+	"meta": {
+		"templateId": "ts-crawlee-playwright-chrome"
+	},
+	"input": "./input_schema.json",
+	"storages": {
+        "dataset": "./dataset_schema.json"
+    },
+	"dockerfile": "./Dockerfile"
+}

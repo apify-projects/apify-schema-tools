@@ -2,7 +2,7 @@ import fs from "fs";
 import parseArgs from "minimist";
 import { compile, JSONSchema } from "json-schema-to-typescript";
 import { InputParam, parseGeneratedInputParams } from "./parser.js";
-import { ApifySchema } from "./schemas.js";
+import { ObjectSchema } from "./schemas.js";
 
 export const DEFAULT_SOURCE_FOLDER = "src-schemas";
 
@@ -30,14 +30,14 @@ export function parseSchemaFiles(inputSrc?: string, datasetSrc?: string) {
     throw new Error(`Input schema source file not found: ${inputSrc}`);
   }
   const inputSchema = inputSrc
-    ? (JSON.parse(fs.readFileSync(inputSrc).toString()) as ApifySchema)
+    ? (JSON.parse(fs.readFileSync(inputSrc).toString()) as ObjectSchema)
     : undefined;
 
   if (datasetSrc && !fs.existsSync(datasetSrc)) {
     throw new Error(`Dataset schema source file not found: ${datasetSrc}`);
   }
   const datasetSchema = datasetSrc
-    ? (JSON.parse(fs.readFileSync(datasetSrc).toString()) as ApifySchema)
+    ? (JSON.parse(fs.readFileSync(datasetSrc).toString()) as ObjectSchema)
     : undefined;
 
   return { inputSchema, datasetSchema };
@@ -182,11 +182,11 @@ export function filterValidInputSchemaProperties(schema: JSONSchema) {
 }
 
 export async function generateInputDefaultsFileContent(
-  inputSchema: ApifySchema
+  inputSchema: ObjectSchema
 ) {
   const defaultValues: Record<string, any> = {};
 
-  for (const [property, definition] of Object.entries(inputSchema.properties)) {
+  for (const [property, definition] of Object.entries(inputSchema.properties ?? {})) {
     if ("default" in definition) {
       defaultValues[property] = definition.default;
     }
@@ -224,11 +224,11 @@ export async function generateInputDefaultsFileContent(
 import { Actor } from 'apify';
 import type { Input, ${paramTypesToImport.join(", ")} } from './input.js';
 
-export const DEFAULT_INPUT_VALUES = ${JSON.stringify(defaultValues, null, 4)} as const;
+export const DEFAULT_INPUT_VALUES = ${JSON.stringify(defaultValues, null, 4)};
 
 export const REQUIRED_INPUT_FIELDS_WITHOUT_DEFAULT = [${requiredParamsWithoutDefaults
     .map(({ key }) => `"${key}"`)
-    .join(", ")}] as const;
+    .join(", ")}];
 
 export type InputWithDefaults = Input & {
 ${optionalParamsWithDefaults

@@ -1,88 +1,131 @@
-import { JSONSchema } from "json-schema-to-typescript";
 import { JSONSchema4 } from "json-schema";
 import fs from "node:fs";
+import { Schema } from "node:inspector/promises";
 
 type SchemaProperty = JSONSchema4 & {
   position?: number;
-}
+};
 
-type SchemaPropertyWithPosition = SchemaProperty & { position: number };
+type OrderedSchemaProperty = SchemaProperty & { position: number };
 
-function isSchemaPropertyWithPosition(
+function isOrderedSchemaProperty(
   property: SchemaProperty
 ): property is SchemaProperty & { position: number } {
   return typeof property.position === "number";
 }
 
-export interface ApifySchema extends JSONSchema {
-  title?: string;
-  properties: Record<string, SchemaProperty>;
+export interface ObjectSchema extends JSONSchema4 {
+  type: "object";
+  properties?: Record<string, SchemaProperty>;
   required?: string[];
 }
 
-/**
- * Merges two JSON schemas by combining their properties, required fields, and definitions.
- * If a property exists in both schemas, the one from the additional schema will overwrite the base schema.
- * The type of both schemas is expected to be `object`, with the `properties` entry defined.
- * 
- * If properties have the `position` field, it will be used to sort the properties in the resulting schema.
- * Properties without the `position` field will be sorted to the end.
- *
- * @param baseSchema - The base JSON schema to merge into.
- * @param additionalSchema - The additional JSON schema to merge with the base schema.
- * @returns A new JSON schema that is the result of merging the two schemas.
- */
-export function sumSchemas(
-  baseSchema: ApifySchema,
-  additionalSchema: ApifySchema
-): ApifySchema {
-  const result: ApifySchema = { ...baseSchema };
+function isObjectSchema(schema: JSONSchema4): schema is ObjectSchema {
+  return schema.type === "object";
+}
 
-  const propertiesWithPosition: [string, SchemaPropertyWithPosition][] = [];
-  const propertiesWithoutPosition: Record<string, SchemaProperty> = {};
+interface ArraySchema extends JSONSchema4 {
+  type: "array";
+}
 
-  const mergedProperties = {
-    ...baseSchema.properties,
-    ...additionalSchema.properties,
+function isArraySchema(schema: JSONSchema4): schema is ArraySchema {
+  return schema.type === "array";
+}
+
+function mergeProperties(
+  baseProperty: SchemaProperty,
+  additionalProperty: SchemaProperty,
+  deep: boolean
+): SchemaProperty {
+  if (!deep) {
+    // If not deep merging, we just take the additional property
+    return additionalProperty;
+  }
+  if (isObjectSchema(baseProperty) && isObjectSchema(additionalProperty)) {
+    return mergeObjectSchemas(baseProperty, additionalProperty, deep);
+  }
+  if (isArraySchema(baseProperty) && isArraySchema(additionalProperty)) {
+    return mergeArraySchemas(baseProperty, additionalProperty, deep);
+  }
+  // If the property is not an object or array, we just take the additional property
+  return additionalProperty;
+}
+
+function mergeObjectSchemas(
+  baseSchema: ObjectSchema,
+  additionalSchema: ObjectSchema,
+  deep: boolean = true,
+): ObjectSchema {
+  const baseProperties = baseSchema.properties || {};
+  const additionalProperties = additionalSchema.properties || {};
+
+  const propertiesWithPosition: [string, OrderedSchemaProperty][] = [];
+  const propertiesWithoutPosition: [string, SchemaProperty][] = [];
+
+  function addProperty(key: string, property: SchemaProperty) {
+    if (isOrderedSchemaProperty(property)) {
+      propertiesWithPosition.push([key, property]);
+    } else {
+      propertiesWithoutPosition.push([key, property]);
+    }
   }
 
-  for (const [key, value] of Object.entries(mergedProperties)) {
-    if (isSchemaPropertyWithPosition(value)) {
-      propertiesWithPosition.push([key, value]);
+  for (const [key, baseProperty] of Object.entries(baseProperties)) {
+    if (key in additionalProperties) {
+      const additionalProperty = additionalProperties[key];
+      addProperty(key, mergeProperties(baseProperty, additionalProperty, deep));
     } else {
-      propertiesWithoutPosition[key] = value;
+      addProperty(key, baseProperty);
+    }
+  }
+
+  // Add properties that only exist in additional schema
+  for (const [key, additionalProperty] of Object.entries(additionalProperties)) {
+    if (!(key in baseProperties)) {
+      addProperty(key, additionalProperty);
     }
   }
 
   propertiesWithPosition.sort((a, b) => {
     return a[1].position - b[1].position;
-  })
+  });
 
-  result.properties = {
-    ...Object.fromEntries(propertiesWithPosition),
-    ...propertiesWithoutPosition,
+  return {
+    ...baseSchema,
+    ...additionalSchema,
+    properties: {
+      ...Object.fromEntries(propertiesWithPosition),
+      ...Object.fromEntries(propertiesWithoutPosition),
+    },
+    required: Array.from(
+      new Set([
+        ...(baseSchema.required || []),
+        ...(additionalSchema.required || []),
+      ])
+    ),
   };
+}
 
-  // Merge required fields
-  if (baseSchema.required && additionalSchema.required) {
-    result.required = Array.from(
-      new Set([...baseSchema.required, ...additionalSchema.required])
-    );
-  } else if (additionalSchema.required) {
-    result.required = [...additionalSchema.required];
+function mergeArraySchemas(
+  baseSchema: ArraySchema,
+  additionalSchema: ArraySchema,
+  deep: boolean,
+): ArraySchema {
+  const baseItems = baseSchema.items;
+  const additionalItems = additionalSchema.items;
+
+  if (baseItems && !Array.isArray(baseItems) && additionalItems && !Array.isArray(additionalItems)) {
+    return {
+      ...baseSchema,
+      ...additionalSchema,
+      items: mergeProperties(baseItems, additionalItems, deep),
+    };
   }
 
-  // Overwrite title if it exists in the additional schema
-  if (additionalSchema.title) {
-    result.title = additionalSchema.title;
-  }
-
-  // Overwrite description if it exists in the additional schema
-  if (additionalSchema.description) {
-    result.description = additionalSchema.description;
-  }
-
-  return result;
+  return {
+    ...baseSchema,
+    ...additionalSchema,
+  };
 }
 
 export interface ParseSchemaProps {
@@ -90,10 +133,11 @@ export interface ParseSchemaProps {
   datasetSrc?: string;
   addInputSrc?: string;
   addDatasetSrc?: string;
+  deepMerge: boolean;
 }
 
 export function parseSchemas(props: ParseSchemaProps) {
-  const { inputSrc, datasetSrc, addInputSrc, addDatasetSrc } = props;
+  const { inputSrc, datasetSrc, addInputSrc, addDatasetSrc, deepMerge } = props;
 
   if (!inputSrc && !datasetSrc) {
     throw new Error(
@@ -105,28 +149,28 @@ export function parseSchemas(props: ParseSchemaProps) {
     throw new Error(`Input schema source file not found: ${inputSrc}`);
   }
   let inputSchema = inputSrc
-    ? (JSON.parse(fs.readFileSync(inputSrc).toString()) as ApifySchema)
+    ? (JSON.parse(fs.readFileSync(inputSrc).toString()) as ObjectSchema)
     : undefined;
 
   if (datasetSrc && !fs.existsSync(datasetSrc)) {
     throw new Error(`Dataset schema source file not found: ${datasetSrc}`);
   }
   let datasetSchema = datasetSrc
-    ? (JSON.parse(fs.readFileSync(datasetSrc).toString()) as ApifySchema)
+    ? (JSON.parse(fs.readFileSync(datasetSrc).toString()) as ObjectSchema)
     : undefined;
 
   if (inputSchema && addInputSrc && fs.existsSync(addInputSrc)) {
     const addInputSchema = JSON.parse(
       fs.readFileSync(addInputSrc).toString()
-    ) as ApifySchema;
-    inputSchema = sumSchemas(inputSchema, addInputSchema);
+    ) as ObjectSchema;
+    inputSchema = mergeObjectSchemas(inputSchema, addInputSchema, deepMerge);
   }
 
   if (datasetSchema && addDatasetSrc && fs.existsSync(addDatasetSrc)) {
     const addDatasetSchema = JSON.parse(
       fs.readFileSync(addDatasetSrc).toString()
-    ) as ApifySchema;
-    datasetSchema = sumSchemas(datasetSchema, addDatasetSchema);
+    ) as ObjectSchema;
+    datasetSchema = mergeObjectSchemas(datasetSchema, addDatasetSchema, deepMerge);
   }
 
   return { inputSchema, datasetSchema };

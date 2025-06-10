@@ -1,245 +1,11 @@
 import { describe, it, expect, afterEach, beforeEach } from "vitest";
-import { type ApifySchema, sumSchemas, parseSchemas } from "../src/schemas.js";
+import { parseSchemas, type ObjectSchema } from "../src/schemas.js";
 import fs from "node:fs";
 import path from "node:path";
 
-const TEST_ROOT_DIR = path.join(process.cwd(), "test-temp-schema");
+const TEST_ROOT_DIR = path.join(process.cwd(), "test-temp-schemas");
 
-describe("sumSchemas", () => {
-  it("should merge properties from both schemas", () => {
-    const baseSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        field1: { type: "string" },
-        field2: { type: "number" },
-      },
-    };
-
-    const additionalSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        field3: { type: "boolean" },
-        field4: { type: "array" },
-      },
-    };
-
-    const result = sumSchemas(baseSchema, additionalSchema);
-
-    expect(result.properties).toEqual({
-      field1: { type: "string" },
-      field2: { type: "number" },
-      field3: { type: "boolean" },
-      field4: { type: "array" },
-    });
-  });
-
-  it("should overwrite base schema properties with additional schema properties when they have the same key", () => {
-    const baseSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        field1: { type: "string", title: "Base Field 1" },
-        field2: { type: "number" },
-      },
-    };
-
-    const additionalSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        field1: {
-          type: "string",
-          title: "Additional Field 1",
-          default: "test",
-        },
-        field3: { type: "boolean" },
-      },
-    };
-
-    const result = sumSchemas(baseSchema, additionalSchema);
-
-    expect(result.properties?.field1).toEqual({
-      type: "string",
-      title: "Additional Field 1",
-      default: "test",
-    });
-    expect(result.properties?.field2).toEqual({ type: "number" });
-    expect(result.properties?.field3).toEqual({ type: "boolean" });
-  });
-
-  it("should merge required fields from both schemas without duplicates", () => {
-    const baseSchema: ApifySchema = {
-      type: "object",
-      properties: {},
-      required: ["field1", "field2"],
-    };
-
-    const additionalSchema: ApifySchema = {
-      type: "object",
-      properties: {},
-      required: ["field2", "field3"],
-    };
-
-    const result = sumSchemas(baseSchema, additionalSchema);
-
-    expect(result.required).toEqual(["field1", "field2", "field3"]);
-  });
-
-  it("should use additional schema required fields when base schema has no required fields", () => {
-    const baseSchema: ApifySchema = {
-      type: "object",
-      properties: {},
-    };
-
-    const additionalSchema: ApifySchema = {
-      type: "object",
-      properties: {},
-      required: ["field1", "field2"],
-    };
-
-    const result = sumSchemas(baseSchema, additionalSchema);
-
-    expect(result.required).toEqual(["field1", "field2"]);
-  });
-
-  it("should preserve base schema required fields when additional schema has no required fields", () => {
-    const baseSchema: ApifySchema = {
-      type: "object",
-      properties: {},
-      required: ["field1", "field2"],
-    };
-
-    const additionalSchema: ApifySchema = {
-      type: "object",
-      properties: {},
-    };
-
-    const result = sumSchemas(baseSchema, additionalSchema);
-
-    expect(result.required).toEqual(["field1", "field2"]);
-  });
-
-  it("should preserve other schema properties from base schema", () => {
-    const baseSchema: ApifySchema = {
-      type: "object",
-      title: "Base Schema",
-      description: "Base description",
-      schemaVersion: 1,
-      properties: {
-        field1: { type: "string" },
-      },
-    };
-
-    const additionalSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        field2: { type: "number" },
-      },
-    };
-
-    const result = sumSchemas(baseSchema, additionalSchema);
-
-    expect(result.title).toBe("Base Schema");
-    expect(result.description).toBe("Base description");
-    expect(result.schemaVersion).toBe(1);
-    expect(result.properties).toEqual({
-      field1: { type: "string" },
-      field2: { type: "number" },
-    });
-  });
-
-  it("should create a new schema object without modifying the original schemas", () => {
-    const baseSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        field1: { type: "string" },
-      },
-      required: ["field1"],
-    };
-
-    const additionalSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        field2: { type: "number" },
-      },
-      required: ["field2"],
-    };
-
-    const originalBaseProperties = { ...baseSchema.properties };
-    const originalBaseRequired = [...(baseSchema.required || [])];
-    const originalAdditionalProperties = { ...additionalSchema.properties };
-    const originalAdditionalRequired = [...(additionalSchema.required || [])];
-
-    const result = sumSchemas(baseSchema, additionalSchema);
-
-    // Verify original schemas are unchanged
-    expect(baseSchema.properties).toEqual(originalBaseProperties);
-    expect(baseSchema.required).toEqual(originalBaseRequired);
-    expect(additionalSchema.properties).toEqual(originalAdditionalProperties);
-    expect(additionalSchema.required).toEqual(originalAdditionalRequired);
-
-    // Verify result is a new object
-    expect(result).not.toBe(baseSchema);
-    expect(result.properties).not.toBe(baseSchema.properties);
-  });
-
-  it("should override the title and the description if they exist in the additional schema", () => {
-    const baseSchema: ApifySchema = {
-      type: "object",
-      title: "Base Schema",
-      description: "Base description",
-      properties: {
-        field1: { type: "string" },
-      },
-    };
-
-    const additionalSchema: ApifySchema = {
-      type: "object",
-      title: "Additional Schema",
-      description: "Additional description",
-      properties: {
-        field2: { type: "number" },
-      },
-    };
-
-    const result = sumSchemas(baseSchema, additionalSchema);
-
-    expect(result.title).toBe("Additional Schema");
-    expect(result.description).toBe("Additional description");
-    expect(result.properties).toEqual({
-      field1: { type: "string" },
-      field2: { type: "number" },
-    });
-  });
-
-  it("should sort properties by their position, if defined, with properties without position at the end", () => {
-    const baseSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        field1: { type: "string", position: 2 },
-        field2: { type: "number" }, // this will be sorted to the end
-        field3: { type: "boolean", position: 3 },
-      },
-    };
-
-    const additionalSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        field3: { type: "boolean", position: 1 }, // the position will be overridden
-        field4: { type: "boolean", position: 2 }, // this will be sorted just after field1
-      },
-    };
-
-    const result = sumSchemas(baseSchema, additionalSchema);
-
-    expect(Object.keys(result.properties)).toEqual([
-      "field3",
-      "field1",
-      "field4",
-      "field2",
-    ]);
-  });
-});
-
-describe("parseSchemas", () => {
+describe("schemas.ts", () => {
   beforeEach(() => {
     // Create test directory
     fs.mkdirSync(TEST_ROOT_DIR, { recursive: true });
@@ -252,312 +18,649 @@ describe("parseSchemas", () => {
     }
   });
 
-  const createTestSchema = (name: string, schema: ApifySchema) => {
+  const createTestSchema = (name: string, schema: ObjectSchema) => {
     const filePath = path.join(TEST_ROOT_DIR, `${name}.json`);
     fs.writeFileSync(filePath, JSON.stringify(schema, null, 2));
     return filePath;
   };
 
-  it("should parse input and dataset schemas from files", () => {
-    const inputSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        inputField1: { type: "string" },
-        inputField2: { type: "number", default: 42 },
-      },
-      required: ["inputField1"],
-    };
+  describe("parseSchemas", () => {
+    it("should parse input and dataset schemas from files", () => {
+      const inputSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          inputField1: { type: "string" },
+          inputField2: { type: "number", default: 42 },
+        },
+        required: ["inputField1"],
+      };
 
-    const datasetSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        datasetField1: { type: "string" },
-        datasetField2: { type: "boolean" },
-      },
-      required: ["datasetField1"],
-    };
+      const datasetSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          datasetField1: { type: "string" },
+          datasetField2: { type: "boolean" },
+        },
+        required: ["datasetField1"],
+      };
 
-    const inputSrc = createTestSchema("input", inputSchema);
-    const datasetSrc = createTestSchema("dataset", datasetSchema);
+      const inputSrc = createTestSchema("input", inputSchema);
+      const datasetSrc = createTestSchema("dataset", datasetSchema);
 
-    const result = parseSchemas({ inputSrc, datasetSrc });
+      const result = parseSchemas({ inputSrc, datasetSrc, deepMerge: false });
 
-    expect(result.inputSchema).toEqual(inputSchema);
-    expect(result.datasetSchema).toEqual(datasetSchema);
-  });
-
-  it("should parse only input schema when dataset source is not provided", () => {
-    const inputSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        inputField1: { type: "string" },
-      },
-    };
-
-    const inputSrc = createTestSchema("input", inputSchema);
-
-    const result = parseSchemas({ inputSrc });
-
-    expect(result.inputSchema).toEqual(inputSchema);
-    expect(result.datasetSchema).toBeUndefined();
-  });
-
-  it("should parse only dataset schema when input source is not provided", () => {
-    const datasetSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        datasetField1: { type: "string" },
-      },
-    };
-
-    const datasetSrc = createTestSchema("dataset", datasetSchema);
-
-    const result = parseSchemas({ datasetSrc });
-
-    expect(result.inputSchema).toBeUndefined();
-    expect(result.datasetSchema).toEqual(datasetSchema);
-  });
-
-  it("should merge additional input schema when provided", () => {
-    const inputSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        baseField: { type: "string" },
-      },
-      required: ["baseField"],
-    };
-
-    const additionalInputSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        additionalField: { type: "number" },
-        baseField: { type: "string", default: "overridden" },
-      },
-      required: ["additionalField"],
-    };
-
-    const inputSrc = createTestSchema("input", inputSchema);
-    const addInputSrc = createTestSchema(
-      "additional-input",
-      additionalInputSchema
-    );
-
-    const result = parseSchemas({ inputSrc, addInputSrc });
-
-    expect(result.inputSchema?.properties).toEqual({
-      baseField: { type: "string", default: "overridden" },
-      additionalField: { type: "number" },
+      expect(result.inputSchema).toEqual(inputSchema);
+      expect(result.datasetSchema).toEqual(datasetSchema);
     });
-    expect(result.inputSchema?.required).toEqual([
-      "baseField",
-      "additionalField",
-    ]);
+
+    it("should parse only input schema when dataset source is not provided", () => {
+      const inputSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          inputField1: { type: "string" },
+        },
+      };
+
+      const inputSrc = createTestSchema("input", inputSchema);
+
+      const result = parseSchemas({ inputSrc, deepMerge: false });
+
+      expect(result.inputSchema).toEqual(inputSchema);
+      expect(result.datasetSchema).toBeUndefined();
+    });
+
+    it("should parse only dataset schema when input source is not provided", () => {
+      const datasetSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          datasetField1: { type: "string" },
+        },
+      };
+
+      const datasetSrc = createTestSchema("dataset", datasetSchema);
+
+      const result = parseSchemas({ datasetSrc, deepMerge: false });
+
+      expect(result.inputSchema).toBeUndefined();
+      expect(result.datasetSchema).toEqual(datasetSchema);
+    });
+
+    it("should throw error when neither input nor dataset source is provided", () => {
+      expect(() => {
+        parseSchemas({ deepMerge: false });
+      }).toThrow("Specify at least one schema source file to parse: inputSrc or datasetSrc");
+    });
+
+    it("should throw error when input source file doesn't exist", () => {
+      const nonExistentFile = path.join(TEST_ROOT_DIR, "nonexistent.json");
+
+      expect(() => {
+        parseSchemas({ inputSrc: nonExistentFile, deepMerge: false });
+      }).toThrow(`Input schema source file not found: ${nonExistentFile}`);
+    });
+
+    it("should throw error when dataset source file doesn't exist", () => {
+      const nonExistentFile = path.join(TEST_ROOT_DIR, "nonexistent.json");
+
+      expect(() => {
+        parseSchemas({ datasetSrc: nonExistentFile, deepMerge: false });
+      }).toThrow(`Dataset schema source file not found: ${nonExistentFile}`);
+    });
+
+    it("should ignore additional schema files if they don't exist", () => {
+      const inputSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          inputField: { type: "string" },
+        },
+      };
+
+      const inputSrc = createTestSchema("input", inputSchema);
+      const nonExistentAddInputSrc = path.join(TEST_ROOT_DIR, "nonexistent.json");
+
+      const result = parseSchemas({ 
+        inputSrc, 
+        addInputSrc: nonExistentAddInputSrc, 
+        deepMerge: false 
+      });
+
+      expect(result.inputSchema).toEqual(inputSchema);
+    });
   });
 
-  it("should merge additional dataset schema when provided", () => {
-    const datasetSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        baseField: { type: "string" },
-      },
-      required: ["baseField"],
-    };
+  describe("shallow merge (deepMerge: false)", () => {
+    it("should merge additional input schema properties", () => {
+      const baseInputSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          baseField: { type: "string" },
+          sharedField: { type: "number", default: 10 },
+        },
+        required: ["baseField"],
+      };
 
-    const additionalDatasetSchema: ApifySchema = {
-      type: "object",
-      properties: {
+      const additionalInputSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          additionalField: { type: "boolean" },
+          sharedField: { type: "number", default: 42 },
+        },
+        required: ["additionalField"],
+      };
+
+      const inputSrc = createTestSchema("input", baseInputSchema);
+      const addInputSrc = createTestSchema("additional-input", additionalInputSchema);
+
+      const result = parseSchemas({ 
+        inputSrc, 
+        addInputSrc, 
+        deepMerge: false 
+      });
+
+      expect(result.inputSchema?.properties).toEqual({
+        baseField: { type: "string" },
         additionalField: { type: "boolean" },
-        baseField: { type: "string", description: "overridden description" },
-      },
-      required: ["additionalField"],
-    };
-
-    const datasetSrc = createTestSchema("dataset", datasetSchema);
-    const addDatasetSrc = createTestSchema(
-      "additional-dataset",
-      additionalDatasetSchema
-    );
-
-    const result = parseSchemas({ datasetSrc, addDatasetSrc });
-
-    expect(result.datasetSchema?.properties).toEqual({
-      baseField: { type: "string", description: "overridden description" },
-      additionalField: { type: "boolean" },
-    });
-    expect(result.datasetSchema?.required).toEqual([
-      "baseField",
-      "additionalField",
-    ]);
-  });
-
-  it("should ignore additional schema files if they don't exist", () => {
-    const inputSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        inputField: { type: "string" },
-      },
-    };
-
-    const inputSrc = createTestSchema("input", inputSchema);
-    const nonExistentAddInputSrc = path.join(TEST_ROOT_DIR, "nonexistent.json");
-
-    const result = parseSchemas({
-      inputSrc,
-      addInputSrc: nonExistentAddInputSrc,
+        sharedField: { type: "number", default: 42 }, // overwritten
+      });
+      expect(result.inputSchema?.required).toEqual(["baseField", "additionalField"]);
     });
 
-    expect(result.inputSchema).toEqual(inputSchema);
+    it("should merge additional dataset schema properties", () => {
+      const baseDatasetSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          baseField: { type: "string" },
+          sharedField: { type: "string", description: "base description" },
+        },
+        required: ["baseField"],
+      };
+
+      const additionalDatasetSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          additionalField: { type: "boolean" },
+          sharedField: { type: "string", description: "overridden description" },
+        },
+        required: ["additionalField"],
+      };
+
+      const datasetSrc = createTestSchema("dataset", baseDatasetSchema);
+      const addDatasetSrc = createTestSchema("additional-dataset", additionalDatasetSchema);
+
+      const result = parseSchemas({ 
+        datasetSrc, 
+        addDatasetSrc, 
+        deepMerge: false 
+      });
+
+      expect(result.datasetSchema?.properties).toEqual({
+        baseField: { type: "string" },
+        additionalField: { type: "boolean" },
+        sharedField: { type: "string", description: "overridden description" },
+      });
+      expect(result.datasetSchema?.required).toEqual(["baseField", "additionalField"]);
+    });
+
+    it("should merge both additional schemas when both are provided", () => {
+      const inputSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          inputBase: { type: "string" },
+        },
+      };
+
+      const datasetSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          datasetBase: { type: "string" },
+        },
+      };
+
+      const additionalInputSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          inputAdditional: { type: "number" },
+        },
+      };
+
+      const additionalDatasetSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          datasetAdditional: { type: "boolean" },
+        },
+      };
+
+      const inputSrc = createTestSchema("input", inputSchema);
+      const datasetSrc = createTestSchema("dataset", datasetSchema);
+      const addInputSrc = createTestSchema("additional-input", additionalInputSchema);
+      const addDatasetSrc = createTestSchema("additional-dataset", additionalDatasetSchema);
+
+      const result = parseSchemas({ 
+        inputSrc, 
+        datasetSrc, 
+        addInputSrc, 
+        addDatasetSrc, 
+        deepMerge: false 
+      });
+
+      expect(result.inputSchema?.properties).toEqual({
+        inputBase: { type: "string" },
+        inputAdditional: { type: "number" },
+      });
+
+      expect(result.datasetSchema?.properties).toEqual({
+        datasetBase: { type: "string" },
+        datasetAdditional: { type: "boolean" },
+      });
+    });
+
+    it("should handle required fields merging without duplicates", () => {
+      const baseSchema: ObjectSchema = {
+        type: "object",
+        properties: {},
+        required: ["field1", "field2"],
+      };
+
+      const additionalSchema: ObjectSchema = {
+        type: "object",
+        properties: {},
+        required: ["field2", "field3"],
+      };
+
+      const inputSrc = createTestSchema("input", baseSchema);
+      const addInputSrc = createTestSchema("additional", additionalSchema);
+
+      const result = parseSchemas({ 
+        inputSrc, 
+        addInputSrc, 
+        deepMerge: false 
+      });
+
+      expect(result.inputSchema?.required).toEqual(["field1", "field2", "field3"]);
+    });
   });
 
-  it("should throw error when neither input nor dataset source is provided", () => {
-    expect(() => {
-      parseSchemas({});
-    }).toThrow(
-      "Specify at least one schema source file to parse: inputSrc or datasetSrc"
-    );
+  describe("property positioning", () => {
+    it("should order properties with position numbers first, then properties without position", () => {
+      const baseSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          fieldWithoutPosition1: { type: "string" },
+          fieldWithPosition2: { type: "string", position: 2 },
+          fieldWithoutPosition2: { type: "string" },
+        },
+      };
+
+      const additionalSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          fieldWithPosition1: { type: "string", position: 1 },
+          fieldWithPosition3: { type: "string", position: 3 },
+          fieldWithoutPosition3: { type: "string" },
+        },
+      };
+
+      const inputSrc = createTestSchema("input", baseSchema);
+      const addInputSrc = createTestSchema("additional", additionalSchema);
+
+      const result = parseSchemas({ 
+        inputSrc, 
+        addInputSrc, 
+        deepMerge: false 
+      });
+
+      const propertyKeys = Object.keys(result.inputSchema?.properties || {});
+      
+      // Properties with position should come first, ordered by position
+      expect(propertyKeys.indexOf("fieldWithPosition1")).toBeLessThan(
+        propertyKeys.indexOf("fieldWithPosition2")
+      );
+      expect(propertyKeys.indexOf("fieldWithPosition2")).toBeLessThan(
+        propertyKeys.indexOf("fieldWithPosition3")
+      );
+      
+      // Properties without position should come after positioned properties
+      expect(propertyKeys.indexOf("fieldWithPosition3")).toBeLessThan(
+        propertyKeys.indexOf("fieldWithoutPosition1")
+      );
+    });
+
+    it("should handle position override when merging properties", () => {
+      const baseSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          sharedField: { type: "string", position: 5 },
+          otherField: { type: "string" },
+        },
+      };
+
+      const additionalSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          sharedField: { type: "string", position: 1 },
+          newField: { type: "string", position: 2 },
+        },
+      };
+
+      const inputSrc = createTestSchema("input", baseSchema);
+      const addInputSrc = createTestSchema("additional", additionalSchema);
+
+      const result = parseSchemas({ 
+        inputSrc, 
+        addInputSrc, 
+        deepMerge: false 
+      });
+
+      const propertyKeys = Object.keys(result.inputSchema?.properties || {});
+      
+      // sharedField should now have position 1 (overridden)
+      expect(propertyKeys.indexOf("sharedField")).toBeLessThan(
+        propertyKeys.indexOf("newField")
+      );
+      expect(propertyKeys.indexOf("newField")).toBeLessThan(
+        propertyKeys.indexOf("otherField")
+      );
+    });
   });
 
-  it("should throw error when input source file doesn't exist", () => {
-    const nonExistentFile = path.join(TEST_ROOT_DIR, "nonexistent.json");
+  describe("deep merge (deepMerge: true)", () => {
+    it("should deeply merge nested object properties", () => {
+      const baseSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          nestedObject: {
+            type: "object",
+            properties: {
+              baseNestedField: { type: "string" },
+              sharedNestedField: { type: "number", default: 10 },
+            },
+            required: ["baseNestedField"],
+          },
+          simpleField: { type: "string" },
+        },
+      };
 
-    expect(() => {
-      parseSchemas({ inputSrc: nonExistentFile });
-    }).toThrow(`Input schema source file not found: ${nonExistentFile}`);
-  });
+      const additionalSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          nestedObject: {
+            type: "object",
+            properties: {
+              additionalNestedField: { type: "boolean" },
+              sharedNestedField: { type: "number", default: 42 },
+            },
+            required: ["additionalNestedField"],
+          },
+          newSimpleField: { type: "string" },
+        },
+      };
 
-  it("should throw error when dataset source file doesn't exist", () => {
-    const nonExistentFile = path.join(TEST_ROOT_DIR, "nonexistent.json");
+      const inputSrc = createTestSchema("input", baseSchema);
+      const addInputSrc = createTestSchema("additional", additionalSchema);
 
-    expect(() => {
-      parseSchemas({ datasetSrc: nonExistentFile });
-    }).toThrow(`Dataset schema source file not found: ${nonExistentFile}`);
-  });
+      const result = parseSchemas({ 
+        inputSrc, 
+        addInputSrc, 
+        deepMerge: true 
+      });
 
-  it("should handle complex schemas with nested properties", () => {
-    const inputSchema: ApifySchema = {
-      type: "object",
-      title: "Complex Input Schema",
-      schemaVersion: 1,
-      properties: {
-        simpleField: { type: "string" },
-        objectField: {
-          type: "object",
-          properties: {
-            nestedField: { type: "number" },
+      const nestedObject = result.inputSchema?.properties?.nestedObject as ObjectSchema;
+      
+      expect(nestedObject.properties).toEqual({
+        baseNestedField: { type: "string" },
+        additionalNestedField: { type: "boolean" },
+        sharedNestedField: { type: "number", default: 42 },
+      });
+      expect(nestedObject.required).toEqual(["baseNestedField", "additionalNestedField"]);
+      
+      expect(result.inputSchema?.properties?.simpleField).toEqual({ type: "string" });
+      expect(result.inputSchema?.properties?.newSimpleField).toEqual({ type: "string" });
+    });
+
+    it("should deeply merge array item schemas", () => {
+      const baseSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          arrayField: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                baseItemField: { type: "string" },
+                sharedItemField: { type: "number" },
+              },
+              required: ["baseItemField"],
+            },
           },
         },
-        arrayField: {
-          type: "array",
-          items: { type: "string" },
+      };
+
+      const additionalSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          arrayField: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                additionalItemField: { type: "boolean" },
+                sharedItemField: { type: "string" }, // type override
+              },
+              required: ["additionalItemField"],
+            },
+          },
         },
-      },
-      required: ["simpleField"],
-    };
+      };
 
-    const inputSrc = createTestSchema("complex-input", inputSchema);
+      const inputSrc = createTestSchema("input", baseSchema);
+      const addInputSrc = createTestSchema("additional", additionalSchema);
 
-    const result = parseSchemas({ inputSrc });
+      const result = parseSchemas({ 
+        inputSrc, 
+        addInputSrc, 
+        deepMerge: true 
+      });
 
-    expect(result.inputSchema).toEqual(inputSchema);
-    expect(result.inputSchema?.title).toBe("Complex Input Schema");
-    expect(result.inputSchema?.schemaVersion).toBe(1);
-  });
-
-  it("should merge both additional schemas when both are provided", () => {
-    const inputSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        inputBase: { type: "string" },
-      },
-    };
-
-    const datasetSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        datasetBase: { type: "string" },
-      },
-    };
-
-    const additionalInputSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        inputAdditional: { type: "number" },
-      },
-    };
-
-    const additionalDatasetSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        datasetAdditional: { type: "boolean" },
-      },
-    };
-
-    const inputSrc = createTestSchema("input", inputSchema);
-    const datasetSrc = createTestSchema("dataset", datasetSchema);
-    const addInputSrc = createTestSchema(
-      "additional-input",
-      additionalInputSchema
-    );
-    const addDatasetSrc = createTestSchema(
-      "additional-dataset",
-      additionalDatasetSchema
-    );
-
-    const result = parseSchemas({
-      inputSrc,
-      datasetSrc,
-      addInputSrc,
-      addDatasetSrc,
+      const arrayField = result.inputSchema?.properties?.arrayField;
+      const itemSchema = (arrayField as any)?.items as ObjectSchema;
+      
+      expect(itemSchema.properties).toEqual({
+        baseItemField: { type: "string" },
+        additionalItemField: { type: "boolean" },
+        sharedItemField: { type: "string" }, // overridden
+      });
+      expect(itemSchema.required).toEqual(["baseItemField", "additionalItemField"]);
     });
 
-    expect(result.inputSchema?.properties).toEqual({
-      inputBase: { type: "string" },
-      inputAdditional: { type: "number" },
+    it("should not deeply merge when deepMerge is false", () => {
+      const baseSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          nestedObject: {
+            type: "object",
+            properties: {
+              baseNestedField: { type: "string" },
+            },
+            required: ["baseNestedField"],
+          },
+        },
+      };
+
+      const additionalSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          nestedObject: {
+            type: "object",
+            properties: {
+              additionalNestedField: { type: "boolean" },
+            },
+            required: ["additionalNestedField"],
+          },
+        },
+      };
+
+      const inputSrc = createTestSchema("input", baseSchema);
+      const addInputSrc = createTestSchema("additional", additionalSchema);
+
+      const result = parseSchemas({ 
+        inputSrc, 
+        addInputSrc, 
+        deepMerge: false 
+      });
+
+      const nestedObject = result.inputSchema?.properties?.nestedObject as ObjectSchema;
+      
+      // Should completely replace, not merge
+      expect(nestedObject.properties).toEqual({
+        additionalNestedField: { type: "boolean" },
+      });
+      expect(nestedObject.required).toEqual(["additionalNestedField"]);
     });
 
-    expect(result.datasetSchema?.properties).toEqual({
-      datasetBase: { type: "string" },
-      datasetAdditional: { type: "boolean" },
+    it("should handle deeply nested object structures", () => {
+      const baseSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          level1: {
+            type: "object",
+            properties: {
+              level2: {
+                type: "object",
+                properties: {
+                  baseDeepField: { type: "string" },
+                  sharedDeepField: { type: "number" },
+                },
+              },
+            },
+          },
+        },
+      };
+
+      const additionalSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          level1: {
+            type: "object",
+            properties: {
+              level2: {
+                type: "object",
+                properties: {
+                  additionalDeepField: { type: "boolean" },
+                  sharedDeepField: { type: "string" },
+                },
+              },
+              newLevel2Field: { type: "string" },
+            },
+          },
+        },
+      };
+
+      const inputSrc = createTestSchema("input", baseSchema);
+      const addInputSrc = createTestSchema("additional", additionalSchema);
+
+      const result = parseSchemas({ 
+        inputSrc, 
+        addInputSrc, 
+        deepMerge: true 
+      });
+
+      const level1 = result.inputSchema?.properties?.level1 as ObjectSchema;
+      const level2 = level1.properties?.level2 as ObjectSchema;
+      
+      expect(level2.properties).toEqual({
+        baseDeepField: { type: "string" },
+        additionalDeepField: { type: "boolean" },
+        sharedDeepField: { type: "string" },
+      });
+      expect(level1.properties?.newLevel2Field).toEqual({ type: "string" });
     });
   });
 
-  it("should handle empty string as undefined for inputSrc", () => {
-    const datasetSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        datasetField: { type: "string" },
-      },
-    };
+  describe("edge cases", () => {
+    it("should handle empty schemas", () => {
+      const baseSchema: ObjectSchema = {
+        type: "object",
+      };
 
-    const datasetSrc = createTestSchema("dataset", datasetSchema);
+      const additionalSchema: ObjectSchema = {
+        type: "object",
+      };
 
-    const result = parseSchemas({ inputSrc: "", datasetSrc });
+      const inputSrc = createTestSchema("input", baseSchema);
+      const addInputSrc = createTestSchema("additional", additionalSchema);
 
-    expect(result.inputSchema).toBeUndefined();
-    expect(result.datasetSchema).toEqual(datasetSchema);
-  });
+      const result = parseSchemas({ 
+        inputSrc, 
+        addInputSrc, 
+        deepMerge: false 
+      });
 
-  it("should handle empty string as undefined for datasetSrc", () => {
-    const inputSchema: ApifySchema = {
-      type: "object",
-      properties: {
-        inputField: { type: "string" },
-      },
-    };
+      expect(result.inputSchema).toEqual({
+        type: "object",
+        properties: {},
+        required: [],
+      });
+    });
 
-    const inputSrc = createTestSchema("input", inputSchema);
+    it("should handle schemas with no properties", () => {
+      const baseSchema: ObjectSchema = {
+        type: "object",
+        required: ["field1"],
+      };
 
-    const result = parseSchemas({ inputSrc, datasetSrc: "" });
+      const additionalSchema: ObjectSchema = {
+        type: "object",
+        properties: {
+          field2: { type: "string" },
+        },
+      };
 
-    expect(result.inputSchema).toEqual(inputSchema);
-    expect(result.datasetSchema).toBeUndefined();
-  });
+      const inputSrc = createTestSchema("input", baseSchema);
+      const addInputSrc = createTestSchema("additional", additionalSchema);
 
-  it("should throw error when both sources are empty strings", () => {
-    expect(() => {
-      parseSchemas({ inputSrc: "", datasetSrc: "" });
-    }).toThrow(
-      "Specify at least one schema source file to parse: inputSrc or datasetSrc"
-    );
+      const result = parseSchemas({ 
+        inputSrc, 
+        addInputSrc, 
+        deepMerge: false 
+      });
+
+      expect(result.inputSchema?.properties).toEqual({
+        field2: { type: "string" },
+      });
+      expect(result.inputSchema?.required).toEqual(["field1"]);
+    });
+
+    it("should preserve other schema properties during merge", () => {
+      const baseSchema: ObjectSchema = {
+        type: "object",
+        title: "Base Schema",
+        description: "Base description",
+        properties: {
+          field1: { type: "string" },
+        },
+      };
+
+      const additionalSchema: ObjectSchema = {
+        type: "object",
+        title: "Additional Schema",
+        version: "1.0.0",
+        properties: {
+          field2: { type: "number" },
+        },
+      };
+
+      const inputSrc = createTestSchema("input", baseSchema);
+      const addInputSrc = createTestSchema("additional", additionalSchema);
+
+      const result = parseSchemas({ 
+        inputSrc, 
+        addInputSrc, 
+        deepMerge: false 
+      });
+
+      expect(result.inputSchema?.title).toBe("Additional Schema");
+      expect(result.inputSchema?.description).toBe("Base description");
+      expect((result.inputSchema as any)?.version).toBe("1.0.0");
+    });
   });
 });

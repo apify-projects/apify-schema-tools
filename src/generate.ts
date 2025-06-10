@@ -26,6 +26,7 @@ interface Args {
   src_dataset: string;
   add_input?: string;
   add_dataset?: string;
+  deep_merge: boolean;
   input_schema: string;
   dataset_schema: string;
   output_ts_dir: string;
@@ -67,6 +68,11 @@ parser.add_argument("--add-input", {
 parser.add_argument("--add-dataset", {
   help: "path to an additional schema to merge into the dataset schema",
 })
+parser.add_argument("--deep-merge", {
+  help: "whether to deep merge additional schemas into the main schema",
+  action: "store_true",
+  default: false,
+});
 
 parser.add_argument("--input-schema", {
   help: "the path of the destination input schema file",
@@ -100,6 +106,7 @@ const {
   src_dataset,
   add_input,
   add_dataset,
+  deep_merge,
   input_schema,
   dataset_schema,
   output_ts_dir,
@@ -111,6 +118,7 @@ const { inputSchema, datasetSchema } = parseSchemas({
   datasetSrc: input.includes("dataset") ? src_dataset : undefined,
   addInputSrc: add_input,
   addDatasetSrc: add_dataset,
+  deepMerge: deep_merge,
 });
 
 if (output.includes("json-schemas")) {

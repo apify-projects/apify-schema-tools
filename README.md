@@ -55,8 +55,9 @@ You can check which options are available:
 
 ```console
 $ npx apify-generate --help
-usage: apify-generate [-h] [-i [{input,dataset} ...]] [-o [{json-schemas,ts-types} ...]] [--src-input SRC_INPUT] [--src-dataset SRC_DATASET] [--add-input ADD_INPUT] [--add-dataset ADD_DATASET] [--input-schema INPUT_SCHEMA]
-                      [--dataset-schema DATASET_SCHEMA] [--output-ts-dir OUTPUT_TS_DIR] [--include-input-utils {true,false}]
+usage: apify-generate [-h] [-i [{input,dataset} ...]] [-o [{json-schemas,ts-types} ...]] [--src-input SRC_INPUT] [--src-dataset SRC_DATASET] [--add-input ADD_INPUT]
+                      [--add-dataset ADD_DATASET] [--deep-merge] [--input-schema INPUT_SCHEMA] [--dataset-schema DATASET_SCHEMA] [--output-ts-dir OUTPUT_TS_DIR]
+                      [--include-input-utils {true,false}]
 
 Generate JSON schemas and TypeScript files for Actor input and output dataset.
 
@@ -74,6 +75,7 @@ optional arguments:
                         path to an additional schema to merge into the input schema (default: undefined)
   --add-dataset ADD_DATASET
                         path to an additional schema to merge into the dataset schema (default: undefined)
+  --deep-merge          whether to deep merge additional schemas into the main schema (default: false)
   --input-schema INPUT_SCHEMA
                         the path of the destination input schema file (default: .actor/input_schema.json)
   --dataset-schema DATASET_SCHEMA
@@ -291,6 +293,8 @@ An example:
   "required": ["a", "c", "d"]
 }
 ```
+
+Use the option `--deep-merge` to merge object properties and array items, instead of overwriting every definition.
 
 ## Legacy
 

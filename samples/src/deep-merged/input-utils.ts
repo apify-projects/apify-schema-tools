@@ -5,10 +5,11 @@
  */
 
 import { Actor } from 'apify';
-import type { Input, MaximumPages, ProxyConfiguration, MaximumRetries, DebugMode } from './input.js';
+import type { Input, Categories, MaximumPages, ProxyConfiguration, MaximumRetries, DebugMode } from './input.js';
 
 export const DEFAULT_INPUT_VALUES = {
     "startUrls": [],
+    "categories": [],
     "maxPages": 10,
     "proxy": {
         "useApifyProxy": true
@@ -20,6 +21,7 @@ export const DEFAULT_INPUT_VALUES = {
 export const REQUIRED_INPUT_FIELDS_WITHOUT_DEFAULT = ["searchTerm"];
 
 export type InputWithDefaults = Input & {
+  categories: Categories;
   maxPages: MaximumPages;
   proxy: ProxyConfiguration;
   maxRetries: MaximumRetries;

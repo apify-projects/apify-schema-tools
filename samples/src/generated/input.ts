@@ -15,6 +15,15 @@ export type StartURLs = {
  * Term to search for
  */
 export type SearchTerm = string;
+export type CategoryName = string;
+export type CategoryID = string;
+/**
+ * List of categories to filter results
+ */
+export type Categories = {
+  name?: CategoryName;
+  id?: CategoryID;
+}[];
 /**
  * Maximum number of pages to scrape
  */
@@ -30,6 +39,7 @@ export type DebugMode = boolean;
 export interface Input {
   startUrls: StartURLs;
   searchTerm: SearchTerm;
+  categories?: Categories;
   maxPages?: MaximumPages;
   proxy?: ProxyConfiguration;
   debugMode?: DebugMode;

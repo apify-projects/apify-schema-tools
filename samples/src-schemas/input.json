@@ -26,6 +26,20 @@
       "minLength": 1,
       "maxLength": 100
     },
+    "categories": {
+      "position": 30,
+      "type": "array",
+      "title": "Categories",
+      "description": "List of categories to filter results",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "title": "Category name" },
+          "id": { "type": "string", "title": "Category ID" }
+        }
+      }
+    },
     "maxPages": {
       "position": 30,
       "sectionCaption": "Scraping options",
@@ -48,7 +62,7 @@
       }
     },
     "debugMode": {
-      "position": 50,
+      "position": 60,
       "type": "boolean",
       "title": "Debug mode",
       "description": "Enable debug logging",

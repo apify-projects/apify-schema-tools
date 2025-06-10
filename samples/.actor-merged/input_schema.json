@@ -26,6 +26,9 @@
                 "Sample"
             ]
         },
+        "categories": {
+            "type": "array"
+        },
         "maxPages": {
             "sectionCaption": "Scraping options",
             "sectionDescription": "Configure how many pages to scrape and other options.",
@@ -36,14 +39,6 @@
             "minimum": 1,
             "maximum": 1000
         },
-        "maxRetries": {
-            "type": "integer",
-            "title": "Maximum retries",
-            "description": "Maximum number of retries",
-            "default": 3,
-            "minimum": 1,
-            "maximum": 20
-        },
         "proxy": {
             "type": "object",
             "title": "Proxy configuration",
@@ -51,6 +46,14 @@
             "default": {
                 "useApifyProxy": true
             }
+        },
+        "maxRetries": {
+            "type": "integer",
+            "title": "Maximum retries",
+            "description": "Maximum number of retries",
+            "default": 3,
+            "minimum": 1,
+            "maximum": 20
         },
         "debugMode": {
             "type": "boolean",
