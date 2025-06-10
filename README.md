@@ -55,9 +55,8 @@ You can check which options are available:
 
 ```console
 $ npx apify-generate --help
-usage: apify-generate [-h] [-i [{input,dataset} ...]] [-o [{json-schemas,ts-types} ...]] [--src-input SRC_INPUT] [--src-dataset SRC_DATASET]
-                      [--input-schema INPUT_SCHEMA] [--dataset-schema DATASET_SCHEMA] [--output-ts-dir OUTPUT_TS_DIR]
-                      [--include-input-utils {true,false}]
+usage: apify-generate [-h] [-i [{input,dataset} ...]] [-o [{json-schemas,ts-types} ...]] [--src-input SRC_INPUT] [--src-dataset SRC_DATASET] [--add-input ADD_INPUT] [--add-dataset ADD_DATASET] [--input-schema INPUT_SCHEMA]
+                      [--dataset-schema DATASET_SCHEMA] [--output-ts-dir OUTPUT_TS_DIR] [--include-input-utils {true,false}]
 
 Generate JSON schemas and TypeScript files for Actor input and output dataset.
 
@@ -71,6 +70,10 @@ optional arguments:
                         path to the input schema source file (default: src-schemas/input.json)
   --src-dataset SRC_DATASET
                         path to the dataset schema source file (default: src-schemas/dataset-item.json)
+  --add-input ADD_INPUT
+                        path to an additional schema to merge into the input schema (default: undefined)
+  --add-dataset ADD_DATASET
+                        path to an additional schema to merge into the dataset schema (default: undefined)
   --input-schema INPUT_SCHEMA
                         the path of the destination input schema file (default: .actor/input_schema.json)
   --dataset-schema DATASET_SCHEMA
@@ -78,8 +81,7 @@ optional arguments:
   --output-ts-dir OUTPUT_TS_DIR
                         path where to save generated TypeScript files (default: src/generated)
   --include-input-utils {true,false}
-                        include input utilities in the generated TypeScript files: 'input' input and 'ts-types' output are required (default:
-                        true)
+                        include input utilities in the generated TypeScript files: 'input' input and 'ts-types' output are required (default: true)
 ```
 
 You can customize the path of all the files involved in the generation.
@@ -220,6 +222,75 @@ await Actor.exit();
 ### Keep only allowed properties in Input schema
 
 As an example, when `type` is "array", the property `items` is forbidden if `editor` is different from "select".
+
+### Merge a second schema into the main one
+
+This feature is useful when working in monorepos.
+It allows you to define a single common schema across all the actors in the repo,
+and to add or override the tile, the description, and some properties, when necessary.
+
+To use it, use the parameters `--add-input` and `--add-dataset`, e.g.:
+
+```sh
+npx apify-generate \
+  --input input,dataset \
+  --output json-schemas,ts-types \
+  --src-input ../src-schemas/input.json \
+  --src-dataset ../src-schemas/dataset-item.json \
+  --add-input src-schemas/input.json \
+  --add-dataset src-schemas/dataset-item.json
+```
+
+You can also define the order of the properties in the merged schema.
+To do so, add a `position` field to the properties. The script will follow these rules:
+
+- Properties without position or with the same position, are sorted in the same order in which they appear in the source
+  schemas, with the ones in the additional schema after the ones in the base schema.
+- If both properties with and without position exist, the ones without position will appear at the end.
+- The position will be overwritten if a property is overwritten.
+
+An example:
+
+```jsonc
+# Source input schema
+{
+  "title": "My input schema",
+  "description": "My input properties",
+  "properties": {
+    "a": { "type": "string", "position": 3 },
+    "b": { "type": "string" }, // will be last, because it has no position
+    "c": { "type": "string", "position": 1 }
+  },
+  "required": ["a"]
+}
+```
+
+```jsonc
+# Additional input schema
+{
+  "description": "My input properties, a bit changed", // will override the description
+  "properties": {
+    "c": { "type": "boolean", "position": 5 }, // will override also the position
+    "d": { "type": "string", "position": 1 } // will be first
+  },
+  "required": ["c", "d"] // will be merged to the source required parameters
+}
+```
+
+```jsonc
+# Final input schema
+{
+  "title": "My input schema",
+  "description": "My input properties, a bit changed",
+  "properties": {
+    "d": { "type": "string" },
+    "a": { "type": "string" },
+    "c": { "type": "boolean" },
+    "b": { "type": "string" }
+  },
+  "required": ["a", "c", "d"]
+}
+```
 
 ## Legacy
 

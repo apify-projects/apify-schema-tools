@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0
+
+### Added
+
+- The `--add-input` and `--add-dataset` options allow to merge a second input or dataset schema into the source one.
+
 ## 1.1.1
 
 ### Fixed

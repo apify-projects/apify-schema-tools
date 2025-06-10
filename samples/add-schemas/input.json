@@ -1,0 +1,27 @@
+{
+  "title": "Input schema for Web Scraper merged",
+  "description": "startUrls and searchTerm are required. searchTerm must be one of the predefined values.",
+  "properties": {
+    "searchTerm": {
+      "position": 20,
+      "type": "string",
+      "title": "Search term",
+      "description": "Term to search for",
+      "enum" : ["example", "test", "sample"],
+      "enumTitles": [
+        "Example",
+        "Test",
+        "Sample"
+      ]
+    },
+    "maxRetries": {
+      "position": 35,
+      "type": "integer",
+      "title": "Maximum retries",
+      "description": "Maximum number of retries",
+      "default": 3,
+      "minimum": 1,
+      "maximum": 20
+    }
+  }
+}

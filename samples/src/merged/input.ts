@@ -14,23 +14,28 @@ export type StartURLs = {
 /**
  * Term to search for
  */
-export type SearchTerm = string;
+export type SearchTerm = "example" | "test" | "sample";
 /**
  * Maximum number of pages to scrape
  */
 export type MaximumPages = number;
+/**
+ * Maximum number of retries
+ */
+export type MaximumRetries = number;
 /**
  * Enable debug logging
  */
 export type DebugMode = boolean;
 
 /**
- * startUrls and searchTerm are required.
+ * startUrls and searchTerm are required. searchTerm must be one of the predefined values.
  */
 export interface Input {
   startUrls: StartURLs;
   searchTerm: SearchTerm;
   maxPages?: MaximumPages;
+  maxRetries?: MaximumRetries;
   proxy?: ProxyConfiguration;
   debugMode?: DebugMode;
 }

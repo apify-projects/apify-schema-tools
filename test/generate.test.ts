@@ -546,5 +546,358 @@ describe("generate.ts script", () => {
       field2: 42,
     });
     expect(REQUIRED_INPUT_FIELDS_WITHOUT_DEFAULT).toEqual(["field3"]);
-  })
+  });
+
+  it("should merge additional input schema when --add-input is specified", () => {
+    const baseInputSchema = {
+      type: "object",
+      title: "Input",
+      schemaVersion: 1,
+      properties: {
+        baseField: {
+          type: "string",
+          title: "Base Field",
+          default: "base value",
+        },
+        sharedField: {
+          type: "integer",
+          title: "Shared Field",
+          default: 10,
+        },
+      },
+      required: ["baseField"],
+    };
+
+    const additionalInputSchema = {
+      type: "object",
+      properties: {
+        additionalField: {
+          type: "boolean",
+          title: "Additional Field",
+          default: true,
+        },
+        sharedField: {
+          type: "integer",
+          title: "Overridden Shared Field",
+          default: 42,
+          minimum: 1,
+        },
+      },
+      required: ["additionalField"],
+    };
+
+    const { srcSchemasDir, actorDir, generatedDir, dirArgs } =
+      createTestDirectories();
+    writeActorDatasetSchema(actorDir);
+    writeSourceInputSchema(srcSchemasDir, baseInputSchema);
+    writeSourceDatasetSchema(srcSchemasDir, MOCK_DATASET_SCHEMA);
+
+    // Create additional input schema file
+    const additionalInputPath = path.join(srcSchemasDir, "additional-input.json");
+    fs.writeFileSync(additionalInputPath, JSON.stringify(additionalInputSchema, null, 2));
+
+    execSync(
+      `npx apify-generate \
+        --input input \
+        --output json-schemas \
+        --add-input ${additionalInputPath} \
+        ${dirArgs}`,
+      { encoding: "utf8", cwd: process.cwd() }
+    );
+
+    const generatedSchema = JSON.parse(
+      fs.readFileSync(path.join(actorDir, "input_schema.json"), "utf8")
+    );
+
+    // Check that base properties are preserved
+    expect(generatedSchema.properties.baseField).toEqual({
+      type: "string",
+      title: "Base Field",
+      default: "base value",
+    });
+
+    // Check that additional properties are added
+    expect(generatedSchema.properties.additionalField).toEqual({
+      type: "boolean",
+      title: "Additional Field",
+      default: true,
+    });
+
+    // Check that shared properties are overridden by additional schema
+    expect(generatedSchema.properties.sharedField).toEqual({
+      type: "integer",
+      title: "Overridden Shared Field",
+      default: 42,
+      minimum: 1,
+    });
+
+    // Check that required fields are merged
+    expect(generatedSchema.required).toEqual(["baseField", "additionalField"]);
+  });
+
+  it("should merge additional dataset schema when --add-dataset is specified", () => {
+    const baseDatasetSchema = {
+      type: "object",
+      title: "Dataset Item",
+      properties: {
+        title: {
+          type: "string",
+          title: "Title",
+          description: "Page title",
+        },
+        url: {
+          type: "string",
+          title: "URL",
+          description: "Page URL",
+        },
+        extractedAt: {
+          type: "string",
+          title: "Extraction Time",
+          description: "When data was extracted",
+        },
+      },
+      required: ["title", "url"],
+    };
+
+    const additionalDatasetSchema = {
+      type: "object",
+      properties: {
+        metadata: {
+          type: "object",
+          title: "Metadata",
+          description: "Additional metadata",
+          properties: {
+            source: { type: "string" },
+          },
+        },
+        extractedAt: {
+          type: "string",
+          title: "Enhanced Extraction Time",
+          description: "Enhanced timestamp with timezone",
+          format: "date-time",
+        },
+      },
+      required: ["metadata"],
+    };
+
+    const { srcSchemasDir, actorDir, generatedDir, dirArgs } =
+      createTestDirectories();
+    writeActorDatasetSchema(actorDir);
+    writeSourceInputSchema(srcSchemasDir, MOCK_INPUT_SCHEMA);
+    writeSourceDatasetSchema(srcSchemasDir, baseDatasetSchema);
+
+    // Create additional dataset schema file
+    const additionalDatasetPath = path.join(srcSchemasDir, "additional-dataset.json");
+    fs.writeFileSync(additionalDatasetPath, JSON.stringify(additionalDatasetSchema, null, 2));
+
+    execSync(
+      `npx apify-generate \
+        --input dataset \
+        --output json-schemas \
+        --add-dataset ${additionalDatasetPath} \
+        ${dirArgs}`,
+      { encoding: "utf8", cwd: process.cwd() }
+    );
+
+    const generatedSchema = JSON.parse(
+      fs.readFileSync(path.join(actorDir, "dataset_schema.json"), "utf8")
+    );
+
+    // Check that base properties are preserved
+    expect(generatedSchema.fields.properties.title).toEqual({
+      type: "string",
+      title: "Title",
+      description: "Page title",
+    });
+    expect(generatedSchema.fields.properties.url).toEqual({
+      type: "string",
+      title: "URL",
+      description: "Page URL",
+    });
+
+    // Check that additional properties are added
+    expect(generatedSchema.fields.properties.metadata).toEqual({
+      type: "object",
+      title: "Metadata",
+      description: "Additional metadata",
+      properties: {
+        source: { type: "string" },
+      },
+    });
+
+    // Check that shared properties are overridden by additional schema
+    expect(generatedSchema.fields.properties.extractedAt).toEqual({
+      type: "string",
+      title: "Enhanced Extraction Time",
+      description: "Enhanced timestamp with timezone",
+      format: "date-time",
+    });
+
+    // Check that required fields are merged  
+    expect(generatedSchema.fields.required).toEqual(["title", "url", "metadata"]);
+  });
+
+  it("should merge both additional input and dataset schemas when both are specified", () => {
+    const additionalInputSchema = {
+      type: "object",
+      properties: {
+        additionalInputField: {
+          type: "array",
+          title: "Additional Input Field",
+          editor: "select",
+          items: { type: "string" },
+        },
+      },
+    };
+
+    const additionalDatasetSchema = {
+      type: "object",
+      properties: {
+        additionalDatasetField: {
+          type: "integer",
+          title: "Additional Dataset Field",
+        },
+      },
+    };
+
+    const { srcSchemasDir, actorDir, generatedDir, dirArgs } =
+      createTestDirectories();
+    writeActorDatasetSchema(actorDir);
+    writeSourceInputSchema(srcSchemasDir, MOCK_INPUT_SCHEMA);
+    writeSourceDatasetSchema(srcSchemasDir, MOCK_DATASET_SCHEMA);
+
+    // Create additional schema files
+    const additionalInputPath = path.join(srcSchemasDir, "additional-input.json");
+    const additionalDatasetPath = path.join(srcSchemasDir, "additional-dataset.json");
+    fs.writeFileSync(additionalInputPath, JSON.stringify(additionalInputSchema, null, 2));
+    fs.writeFileSync(additionalDatasetPath, JSON.stringify(additionalDatasetSchema, null, 2));
+
+    execSync(
+      `npx apify-generate \
+        --output json-schemas \
+        --add-input ${additionalInputPath} \
+        --add-dataset ${additionalDatasetPath} \
+        ${dirArgs}`,
+      { encoding: "utf8", cwd: process.cwd() }
+    );
+
+    // Check input schema
+    const generatedInputSchema = JSON.parse(
+      fs.readFileSync(path.join(actorDir, "input_schema.json"), "utf8")
+    );
+    expect(generatedInputSchema.properties.startUrls).toBeDefined(); // from base
+    expect(generatedInputSchema.properties.additionalInputField).toEqual({
+      type: "array",
+      title: "Additional Input Field",
+      editor: "select",
+      items: { type: "string" },
+    });
+
+    // Check dataset schema
+    const generatedDatasetSchema = JSON.parse(
+      fs.readFileSync(path.join(actorDir, "dataset_schema.json"), "utf8")
+    );
+    expect(generatedDatasetSchema.fields.properties.title).toBeDefined(); // from base
+    expect(generatedDatasetSchema.fields.properties.additionalDatasetField).toEqual({
+      type: "integer",
+      title: "Additional Dataset Field",
+    });
+  });
+
+  it("should ignore non-existent additional schema files gracefully", () => {
+    const { srcSchemasDir, actorDir, generatedDir, dirArgs } =
+      createTestDirectories();
+    writeActorDatasetSchema(actorDir);
+    writeSourceInputSchema(srcSchemasDir, MOCK_INPUT_SCHEMA);
+    writeSourceDatasetSchema(srcSchemasDir, MOCK_DATASET_SCHEMA);
+
+    const nonExistentInputPath = path.join(srcSchemasDir, "nonexistent-input.json");
+    const nonExistentDatasetPath = path.join(srcSchemasDir, "nonexistent-dataset.json");
+
+    // Should not throw an error and should generate schemas without additional merging
+    const result = execSync(
+      `npx apify-generate \
+        --output json-schemas \
+        --add-input ${nonExistentInputPath} \
+        --add-dataset ${nonExistentDatasetPath} \
+        ${dirArgs}`,
+      { encoding: "utf8", cwd: process.cwd() }
+    );
+
+    expect(result).toContain("Generation completed successfully");
+
+    // Check that base schemas were generated normally
+    const generatedInputSchema = JSON.parse(
+      fs.readFileSync(path.join(actorDir, "input_schema.json"), "utf8")
+    );
+    expect(generatedInputSchema.properties.startUrls).toBeDefined();
+    expect(generatedInputSchema.properties.maxPages).toBeDefined();
+
+    const generatedDatasetSchema = JSON.parse(
+      fs.readFileSync(path.join(actorDir, "dataset_schema.json"), "utf8")
+    );
+    expect(generatedDatasetSchema.fields.properties.title).toBeDefined();
+    expect(generatedDatasetSchema.fields.properties.url).toBeDefined();
+  });
+
+  it("should generate TypeScript types with merged additional schemas", async () => {
+    const additionalInputSchema = {
+      type: "object",
+      properties: {
+        extraConfig: {
+          type: "object",
+          title: "Extra Configuration",
+          properties: {
+            enabled: { type: "boolean", default: false },
+            value: { type: "string" },
+          },
+          required: ["enabled"],
+        },
+      },
+    };
+
+    const { srcSchemasDir, actorDir, generatedDir, dirArgs } =
+      createTestDirectories();
+    writeActorDatasetSchema(actorDir);
+    writeSourceInputSchema(srcSchemasDir, MOCK_INPUT_SCHEMA);
+
+    // Create additional input schema file
+    const additionalInputPath = path.join(srcSchemasDir, "additional-input.json");
+    fs.writeFileSync(additionalInputPath, JSON.stringify(additionalInputSchema, null, 2));
+
+    execSync(
+      `npx apify-generate \
+        --input input \
+        --output ts-types \
+        --add-input ${additionalInputPath} \
+        ${dirArgs}`,
+      { encoding: "utf8", cwd: process.cwd() }
+    );
+
+    // Check that TypeScript files were generated
+    expect(fs.existsSync(path.join(generatedDir, "input.ts"))).toBe(true);
+    expect(fs.existsSync(path.join(generatedDir, "input-utils.ts"))).toBe(true);
+
+    // Verify TypeScript file contains the merged schema
+    const inputTsContent = fs.readFileSync(
+      path.join(generatedDir, "input.ts"),
+      "utf8"
+    );
+    expect(inputTsContent).toContain("startUrls"); // from base schema
+    expect(inputTsContent).toContain("extraConfig"); // from additional schema
+
+    // Check input utilities work with merged schema
+    const { getInputWithDefaultValues } = await import(
+      path.join(generatedDir, `input-utils.ts?t=${Date.now()}`)
+    );
+
+    const result = getInputWithDefaultValues({
+      startUrls: ["https://example.com"],
+    });
+
+    expect(result.startUrls).toEqual(["https://example.com"]);
+    expect(result.maxPages).toBe(10); // default from base schema
+    // Note: extraConfig may not have defaults applied since it's an object without a default value
+    // The individual properties within extraConfig would need their own defaults
+  });
 });

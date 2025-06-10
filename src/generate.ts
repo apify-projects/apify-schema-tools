@@ -6,9 +6,9 @@ import fs from "node:fs";
 import {
   filterValidInputSchemaProperties,
   generateInputDefaultsFileContent,
-  parseSchemaFiles,
 } from "./index.js";
 import { compile } from "json-schema-to-typescript";
+import { parseSchemas } from "./schemas.js";
 
 const INPUTS = ["input", "dataset"] as const;
 const OUTPUTS = ["json-schemas", "ts-types"] as const;
@@ -24,6 +24,8 @@ interface Args {
   output: Output[];
   src_input: string;
   src_dataset: string;
+  add_input?: string;
+  add_dataset?: string;
   input_schema: string;
   dataset_schema: string;
   output_ts_dir: string;
@@ -59,6 +61,13 @@ parser.add_argument("--src-dataset", {
   default: "src-schemas/dataset-item.json",
 });
 
+parser.add_argument("--add-input", {
+  help: "path to an additional schema to merge into the input schema",
+})
+parser.add_argument("--add-dataset", {
+  help: "path to an additional schema to merge into the dataset schema",
+})
+
 parser.add_argument("--input-schema", {
   help: "the path of the destination input schema file",
   default: ".actor/input_schema.json",
@@ -89,16 +98,20 @@ const {
   output,
   src_input,
   src_dataset,
+  add_input,
+  add_dataset,
   input_schema,
   dataset_schema,
   output_ts_dir,
   include_input_utils,
 } = args;
 
-const { inputSchema, datasetSchema } = parseSchemaFiles(
-  input.includes("input") ? src_input : undefined,
-  input.includes("dataset") ? src_dataset : undefined
-);
+const { inputSchema, datasetSchema } = parseSchemas({
+  inputSrc: input.includes("input") ? src_input : undefined,
+  datasetSrc: input.includes("dataset") ? src_dataset : undefined,
+  addInputSrc: add_input,
+  addDatasetSrc: add_dataset,
+});
 
 if (output.includes("json-schemas")) {
   console.log("Generating JSON schemas...");

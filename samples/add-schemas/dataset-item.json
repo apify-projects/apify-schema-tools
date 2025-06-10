@@ -1,0 +1,10 @@
+{
+  "properties": {
+    "type": {
+      "type": "string",
+      "title": "Type",
+      "description": "Item type"
+    }
+  },
+  "required": ["type"]
+}

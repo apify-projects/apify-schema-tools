@@ -1,9 +1,11 @@
 {
   "title": "Input schema for Web Scraper",
+  "description": "startUrls and searchTerm are required.",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
     "startUrls": {
+      "position": 10,
       "type": "array",
       "title": "Start URLs",
       "description": "List of URLs to scrape",
@@ -17,6 +19,7 @@
       }
     },
     "searchTerm": {
+      "position": 20,
       "type": "string",
       "title": "Search term",
       "description": "Term to search for",
@@ -24,6 +27,9 @@
       "maxLength": 100
     },
     "maxPages": {
+      "position": 30,
+      "sectionCaption": "Scraping options",
+      "sectionDescription": "Configure how many pages to scrape and other options.",
       "type": "integer",
       "title": "Maximum pages",
       "description": "Maximum number of pages to scrape",
@@ -32,6 +38,7 @@
       "maximum": 1000
     },
     "proxy": {
+      "position": 40,
       "type": "object",
       "title": "Proxy configuration",
       "description": "Proxy settings",
@@ -41,6 +48,7 @@
       }
     },
     "debugMode": {
+      "position": 50,
       "type": "boolean",
       "title": "Debug mode",
       "description": "Enable debug logging",
