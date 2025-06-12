@@ -295,10 +295,3 @@ An example:
 ```
 
 Use the option `--deep-merge` to merge object properties and array items, instead of overwriting every definition.
-
-## Legacy
-
-The scripts `generate-apify-schema` and `generate-apify-types` were kept for compatibility,
-but they may be removed in the future. Their documentation has been removed.
-
-Using `apify-generate`, instead, is recommended.

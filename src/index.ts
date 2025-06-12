@@ -1,47 +1,7 @@
 import fs from "fs";
-import parseArgs from "minimist";
 import { compile, JSONSchema } from "json-schema-to-typescript";
 import { InputParam, parseGeneratedInputParams } from "./parser.js";
 import { ObjectSchema } from "./schemas.js";
-
-export const DEFAULT_SOURCE_FOLDER = "src-schemas";
-
-export function parseCliArgs<ExtraArgs = {}>() {
-  const args = parseArgs<
-    {
-      input?: boolean;
-      dataset?: boolean;
-      "input-src"?: string;
-      "dataset-src"?: string;
-    } & ExtraArgs
-  >(process.argv.slice(2));
-
-  if (!args.input && !args.dataset) {
-    throw new Error(
-      "Specify at least one schema to parse using CLI options: --input, --dataset"
-    );
-  }
-
-  return args;
-}
-
-export function parseSchemaFiles(inputSrc?: string, datasetSrc?: string) {
-  if (inputSrc && !fs.existsSync(inputSrc)) {
-    throw new Error(`Input schema source file not found: ${inputSrc}`);
-  }
-  const inputSchema = inputSrc
-    ? (JSON.parse(fs.readFileSync(inputSrc).toString()) as ObjectSchema)
-    : undefined;
-
-  if (datasetSrc && !fs.existsSync(datasetSrc)) {
-    throw new Error(`Dataset schema source file not found: ${datasetSrc}`);
-  }
-  const datasetSchema = datasetSrc
-    ? (JSON.parse(fs.readFileSync(datasetSrc).toString()) as ObjectSchema)
-    : undefined;
-
-  return { inputSchema, datasetSchema };
-}
 
 const VALID_INPUT_ROOT_KEYS = [
   "title",

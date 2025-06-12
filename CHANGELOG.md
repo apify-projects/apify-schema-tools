@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.0
+
+### Removed
+
+- The script `generate-apify-schema` has been removed.
+- The script `generate-apify-type` has been removed.
+
 ## 1.3.0
 
 ### Added
